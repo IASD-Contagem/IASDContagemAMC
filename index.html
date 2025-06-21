@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>IASDContagemAMC</title>
+  <style>
+    body {
+      background-color: #1e1e1e;
+      color: #dcdcdc;
+      font-family: monospace;
+      padding: 20px;
+    }
+    pre {
+      background-color: #2d2d2d;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Versão atualizada 22/06/2025, BETA: IASDContagemAMC 0.1  </h1>
+
+  <pre><code>
+O código foi feito em PYTHON, então para funcionar, deve ser instalado no computador o programa do <a href="https://www.python.org/downloads/">PYTHON</a>
+
+Ele é um executável, então, deve ser feito tudo dentro do TERMINAL
+
+Dica: Use o <a href="https://www.cursor.com/">CURSOR</a> em vez do VSCODE, ele tem maior suporte com IA...
+
+#EXTRAS, coloque no seu TERMINAL isto: 
+    #pip install pyautogui
+    #pip install SpeechRecognition
+    #pip install spacy
+    #python -m spacy download pt_core_news_sm
+
+
+  </code></pre>
+
+<pre><code>
+import threading
+import pyautogui
+from spacy.tokens import span
+import speech_recognition as sr
+import spacy
+import time
+import os
+import unicodedata
+span = "Você está usando a versão BETA IASDContagemAMC 0.2, Sempre atualize no site: https://iasd-contagem.github.io/IASDContagemAMC/\n"
+print(span * 5)
+time.sleep(1)
+nlp = spacy.load("pt_core_news_sm")
+
+escutando = False
+
+def beep():
+    os.system('echo \a')
+
+def remover_acentos(texto):
+    """Remove acentos de um texto"""
+    texto_sem_acentos = unicodedata.normalize('NFD', texto)
+    texto_sem_acentos = ''.join(c for c in texto_sem_acentos if not unicodedata.combining(c))
+    return texto_sem_acentos
+
+def intencao_de_louvor(frase):
+    frase = frase.lower()
+    doc = nlp(frase)
+    palavras_chave = ["louvar", "cantar", "cantaremos", "adorar", "glorificar", "entoar", "hino", "louvor", "Deus",]
+    frases_gatilho = ["vamos entoar", "cantaremos agora", "iremos cantar", "cantaremos", "vamos entoar o nome de Deus com o hino"]
+    
+    for frase_gatilho in frases_gatilho:
+        if frase_gatilho in frase:
+            return True
+
+    for token in doc:
+        if token.lemma_ in palavras_chave:
+            return True
+    return False
+
+def ouvir_microfone():
+    global escutando
+    reconhecedor = sr.Recognizer()
+    microfone = sr.Microphone()
+
+    with microfone as source:
+        reconhecedor.adjust_for_ambient_noise(source)
+        reconhecedor.energy_threshold = 200
+        reconhecedor.pause_threshold = 1.0
+        reconhecedor.phrase_threshold = 0.3
+        reconhecedor.non_speaking_duration = 0.5
+        print(" Microfone ajustado. Aguardando comandos de voz...")
+
+    while escutando:
+        with microfone as source:
+            try:
+                audio = reconhecedor.listen(source, timeout=8, phrase_time_limit=15)
+                frase = getattr(reconhecedor, 'recognize_google')(audio, language='pt-BR').lower().strip()
+                if not frase:
+                    continue
+
+                print(f" Você disse: {frase}")
+
+                if intencao_de_louvor(frase):
+                    beep()
+                    print(" Gatilho de louvor detectado!")
+                    
+                    frases_gatilho = ["vamos entoar", "cantaremos agora", "iremos cantar", "cantaremos", "vamos entoar o nome de Deus com o hino"]
+                    palavras_chave = ["louvar", "cantar", "cantaremos", "adorar", "glorificar", "entoar", "hino", "louvor", "Deus"]
+                    texto_para_escrever = ""
+                    for frase_gatilho in frases_gatilho:
+                        if frase_gatilho in frase:
+                            pos = frase.find(frase_gatilho)
+                            texto_para_escrever = frase[pos + len(frase_gatilho):].strip()
+                            break
+                    
+                    if not texto_para_escrever:
+                        for palavra in palavras_chave:
+                            if palavra in frase:
+                                pos = frase.find(palavra)
+                                texto_para_escrever = frase[pos + len(palavra):].strip()
+                                break
+                    
+                    if texto_para_escrever:
+                        texto_sem_acentos = remover_acentos(texto_para_escrever)
+                        print(f" Escrevendo: {texto_sem_acentos}")
+                        pyautogui.write(texto_sem_acentos)
+                        time.sleep(0.5)
+                        pyautogui.click(100, 280)
+                        time.sleep(0.2)
+                        pyautogui.click(100, 280)
+                        time.sleep(0.5)
+                        pyautogui.click(100, 155)
+                        pyautogui.click(100, 155)
+                        pyautogui.click(100, 155)
+                        time.sleep(0.5)
+                        pyautogui.press("delete")
+                        time.sleep(0.2)
+
+            except sr.WaitTimeoutError:
+                continue
+            except sr.UnknownValueError:
+                print(" Não entendi, tente novamente.")
+            except sr.RequestError:
+                print(" Erro com o serviço de reconhecimento.")
+                break
+
+def monitor_terminal():
+    global escutando
+    print("Digite 'on' para iniciar ou 'off' para encerrar:")
+
+    while True:
+        comando = input().strip().lower()
+        if comando == "on" and not escutando:
+            escutando = True
+            threading.Thread(target=ouvir_microfone).start()
+            print(" Iniciado. Fale normalmente, ele ouvirá apenas comandos de louvor.")
+        elif comando == "off":
+            escutando = False
+            print(" Programa encerrado")
+            span = "Você está usando a versão BETA IASDContagemAMC 0.2, Sempre atualize no site: https://iasd-contagem.github.io/IASDContagemAMC/\n"
+            print(span * 5)
+            break
+        else:
+            print(" Comando inválido. Use 'on' ou 'off'.")
+
+if __name__ == "__main__":
+    monitor_terminal()
+
+
+
+    
+    #NÃO SE ESQUEÇA DE COLOCAR NO TERMINAL: 
+    #pip install pyautogui
+    #pip install SpeechRecognition
+    #pip install spacy
+    #python -m spacy download pt_core_news_sm
+
+
+  </code></pre>
+</body>
+</html>
